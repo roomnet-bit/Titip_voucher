@@ -589,6 +589,11 @@ function fmtRp(n){
   const s = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
   return (neg?'-':'')+'Rp '+s;
 }
+function todayStr(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
 function fmtDate(d){
   if(!d) return '—';
   const dt = new Date(d+'T00:00:00');
@@ -754,13 +759,15 @@ function renderVoucherPage(){
   const komisi = stats.komisi;
   const paid = stats.paid;
   const saldo = stats.saldo;
-  const list = vouchersFor(cust.id).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-  const payList = paymentsFor(cust.id).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const list = vouchersFor(cust.id).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const payList = paymentsFor(cust.id).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
   const shareText =
     `Saldo Reseller — ${cust.name}\nRp ${Math.round(saldo).toLocaleString('id-ID')}\n\nTotal komisi: ${fmtRp(komisi)}\nSudah dibayar: ${fmtRp(paid)}\nOmset kotor: ${fmtRp(stats.omset)}\nTotal keping: ${stats.keping}\nOmset kena komisi: ${fmtRp(stats.omsetKomisi)}\n(${rate}% dari omset 2K/3K/5K; voucher 40K tanpa komisi)`;
   lastShareText = shareText;
-  lastReceiptData = { cust, stats, komisi, paid, saldo, rate, list };
+  // struk cetak tetap urut tanggal terlama -> terbaru agar mudah dibaca sebagai rekap
+  const listCetak = list.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  lastReceiptData = { cust, stats, komisi, paid, saldo, rate, list: listCetak };
 
   return chipsHtml + `
   <div class="content">
@@ -798,7 +805,7 @@ function renderVoucherPage(){
     </div>
     ${ui.showPayForm ? `
     <div class="tx-form">
-      <div><label>Tanggal</label><input type="date" id="payDate"></div>
+      <div><label>Tanggal</label><input type="date" id="payDate" value="${todayStr()}"></div>
       <div><label>Jumlah (Rp)</label><input type="number" min="0" id="payAmount" value="0"></div>
       <div class="full"><label>Catatan (opsional)</label><input type="text" id="payNote" placeholder="cth. transfer BCA"></div>
       <div class="submit-row"><button class="mini-btn gold" id="btnSavePay">Simpan Pembayaran</button></div>
@@ -824,7 +831,7 @@ function renderVoucherPage(){
       const editV = ui.editingVoucherId ? state.vouchers.find(v=>v.id===ui.editingVoucherId) : null;
       return `
     <div class="tx-form">
-      <div><label>Tanggal</label><input type="date" id="txDate" value="${editV?editV.date:''}"></div>
+      <div><label>Tanggal</label><input type="date" id="txDate" value="${editV?editV.date:todayStr()}"></div>
       <div><label>Nama Sales</label><input type="text" id="txSales" placeholder="cth. ibnu" value="${editV?escapeHtml(editV.sales||''):''}"></div>
       <div><label>Qty 2K</label><input type="number" min="0" id="txQ2" value="${editV?editV.q2k:0}"></div>
       <div><label>Qty 3K</label><input type="number" min="0" id="txQ3" value="${editV?editV.q3k:0}"></div>
@@ -948,7 +955,7 @@ function renderRingkasanPage(){
 
 /* ============================= KEUANGAN PAGE ============================= */
 function renderKeuanganPage(){
-  const rows = state.finance.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const rows = state.finance.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const masuk = rows.filter(f=>f.type==='Pemasukan').reduce((a,f)=>a+Number(f.amount||0),0);
   const keluar = rows.filter(f=>f.type==='Pengeluaran').reduce((a,f)=>a+Number(f.amount||0),0);
   return `
@@ -964,7 +971,7 @@ function renderKeuanganPage(){
     </div>
     ${ui.showFinForm ? `
     <div class="tx-form">
-      <div><label>Tanggal</label><input type="date" id="fDate"></div>
+      <div><label>Tanggal</label><input type="date" id="fDate" value="${todayStr()}"></div>
       <div><label>Jenis</label>
         <select id="fType" style="width:100%; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:9px 10px; color:var(--cream);">
           <option value="Pemasukan">Pemasukan</option>
