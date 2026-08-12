@@ -490,9 +490,10 @@ let authError = '';
 let authNotice = '';
 let realtimeChannel = null;
 const DENOMS = [
-  { key:'q2k', label:'2K', price:2000 },
-  { key:'q3k', label:'3K', price:3000 },
-  { key:'q5k', label:'5K', price:5000 },
+  { key:'q2k', label:'2K', price:2000, noKomisi:false },
+  { key:'q3k', label:'3K', price:3000, noKomisi:false },
+  { key:'q5k', label:'5K', price:5000, noKomisi:false },
+  { key:'q40k', label:'40K', price:40000, noKomisi:true },
 ];
 
 /* ============================= DATA (SUPABASE) ============================= */
@@ -504,7 +505,7 @@ async function fetchAll(){
     sb.from('finance').select('*').order('date'),
   ]);
   state.customers = (c.data||[]).map(r=>({ id:r.id, name:r.name, rate:Number(r.rate) }));
-  state.vouchers  = (v.data||[]).map(r=>({ id:r.id, customerId:r.customer_id, date:r.date, sales:r.sales, q2k:r.q2k, q3k:r.q3k, q5k:r.q5k }));
+  state.vouchers  = (v.data||[]).map(r=>({ id:r.id, customerId:r.customer_id, date:r.date, sales:r.sales, q2k:r.q2k, q3k:r.q3k, q5k:r.q5k, q40k:r.q40k||0 }));
   state.payments  = (p.data||[]).map(r=>({ id:r.id, customerId:r.customer_id, date:r.date, amount:Number(r.amount), note:r.note }));
   state.finance   = (f.data||[]).map(r=>({ id:r.id, date:r.date, category:r.category, desc:r.description, type:r.type, amount:Number(r.amount) }));
   if(!ui.customerId && state.customers.length) ui.customerId = state.customers[0].id;
@@ -533,19 +534,25 @@ function toast(msg){
 
 /* ============================= CALC ============================= */
 function vouchersFor(cid){ return state.vouchers.filter(v=>v.customerId===cid); }
+function voucherOmset(v){ return DENOMS.reduce((a,d)=>a + (v[d.key]||0)*d.price, 0); }
 function paymentsFor(cid){ return state.payments.filter(p=>p.customerId===cid); }
 function totalPaid(cid){ return paymentsFor(cid).reduce((a,p)=>a+(Number(p.amount)||0),0); }
 function customerStats(cid){
   const list = vouchersFor(cid);
-  const totals = { q2k:0, q3k:0, q5k:0, omset:0, keping:0 };
+  const totals = { q2k:0, q3k:0, q5k:0, q40k:0, omset:0, omsetKomisi:0, omsetNonKomisi:0, keping:0 };
   list.forEach(v=>{
     DENOMS.forEach(d=>{ totals[d.key] += (v[d.key]||0); });
   });
-  DENOMS.forEach(d=>{ totals.omset += totals[d.key]*d.price; });
-  totals.keping = totals.q2k + totals.q3k + totals.q5k;
+  DENOMS.forEach(d=>{
+    const sub = totals[d.key]*d.price;
+    totals.omset += sub;
+    if(d.noKomisi) totals.omsetNonKomisi += sub; else totals.omsetKomisi += sub;
+    totals.keping += totals[d.key];
+  });
   const cust = state.customers.find(c=>c.id===cid);
   totals.rate = cust ? (cust.rate ?? 20) : 20;
-  totals.komisi = totals.omset * totals.rate / 100;
+  // Komisi hanya dihitung dari voucher yang kena komisi (2K/3K/5K). 40K dikecualikan.
+  totals.komisi = totals.omsetKomisi * totals.rate / 100;
   totals.paid = totalPaid(cid);
   totals.saldo = totals.komisi - totals.paid;
   return totals;
@@ -607,13 +614,14 @@ function buildPrintReceipt(data){
   const { cust, stats, komisi, paid, saldo, rate, list } = data;
   const today = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
   const rowsHtml = list.map(v=>{
-    const om = v.q2k*2000+v.q3k*3000+v.q5k*5000;
+    const om = voucherOmset(v);
     return `<tr>
       <td>${fmtDate(v.date)}</td>
       <td>${escapeHtml(v.sales||'—')}</td>
       <td class="r">${v.q2k}</td>
       <td class="r">${v.q3k}</td>
       <td class="r">${v.q5k}</td>
+      <td class="r">${v.q40k||0}</td>
       <td class="r">${fmtRp(om)}</td>
     </tr>`;
   }).join('');
@@ -627,11 +635,13 @@ function buildPrintReceipt(data){
     <div class="receipt-row"><span>Tarif Komisi</span><b>${rate}%</b></div>
     <div class="receipt-line"></div>
     <table class="receipt-table">
-      <thead><tr><th>Tanggal</th><th>Sales</th><th class="r">2K</th><th class="r">3K</th><th class="r">5K</th><th class="r">Omset</th></tr></thead>
-      <tbody>${rowsHtml || '<tr><td colspan="6">Belum ada transaksi</td></tr>'}</tbody>
+      <thead><tr><th>Tanggal</th><th>Sales</th><th class="r">2K</th><th class="r">3K</th><th class="r">5K</th><th class="r">40K</th><th class="r">Omset</th></tr></thead>
+      <tbody>${rowsHtml || '<tr><td colspan="7">Belum ada transaksi</td></tr>'}</tbody>
     </table>
     <div class="receipt-row"><span>Omset Kotor</span><b>${fmtRp(stats.omset)}</b></div>
-    <div class="receipt-row"><span>Komisi (${rate}%)</span><b>${fmtRp(komisi)}</b></div>
+    <div class="receipt-row"><span>Omset kena komisi (2K/3K/5K)</span><b>${fmtRp(stats.omsetKomisi)}</b></div>
+    <div class="receipt-row"><span>Omset 40K (tanpa komisi)</span><b>${fmtRp(stats.omsetNonKomisi)}</b></div>
+    <div class="receipt-row"><span>Komisi (${rate}% dari omset kena komisi)</span><b>${fmtRp(komisi)}</b></div>
     <div class="receipt-row"><span>Sudah Dibayar</span><b>${fmtRp(paid)}</b></div>
     <div class="receipt-total"><span>Saldo Terutang</span><span>${fmtRp(saldo)}</span></div>
     <div class="receipt-foot">
@@ -744,7 +754,7 @@ function renderVoucherPage(){
   const payList = paymentsFor(cust.id).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 
   const shareText =
-    `Saldo terutang — ${cust.name}\nRp ${Math.round(saldo).toLocaleString('id-ID')}\n\nTotal komisi: ${fmtRp(komisi)}\nSudah dibayar: ${fmtRp(paid)}\nOmset kotor: ${fmtRp(stats.omset)}\nTotal keping: ${stats.keping}\n(${rate}% dari total omset kotor)`;
+    `Saldo terutang — ${cust.name}\nRp ${Math.round(saldo).toLocaleString('id-ID')}\n\nTotal komisi: ${fmtRp(komisi)}\nSudah dibayar: ${fmtRp(paid)}\nOmset kotor: ${fmtRp(stats.omset)}\nTotal keping: ${stats.keping}\nOmset kena komisi: ${fmtRp(stats.omsetKomisi)}\n(${rate}% dari omset 2K/3K/5K; voucher 40K tanpa komisi)`;
   lastShareText = shareText;
   lastReceiptData = { cust, stats, komisi, paid, saldo, rate, list };
 
@@ -765,7 +775,7 @@ function renderVoucherPage(){
         ${ui.editingRate
           ? `<input class="rate-edit" type="number" min="0" max="100" id="rateInput" value="${rate}" style="width:52px;">`
           : `<span class="rate-edit" id="rateDisplay" title="Ketuk untuk ubah">${rate}%</span>`
-        } dari total omset kotor voucher potongan yang dititipkan ke ${escapeHtml(cust.name)}. Total komisi ${fmtRp(komisi)}, sudah dibayar ${fmtRp(paid)}.
+        } dari omset voucher 2K/3K/5K yang dititipkan ke ${escapeHtml(cust.name)}${stats.omsetNonKomisi ? ' (voucher 40K tidak kena komisi)' : ''}. Total komisi ${fmtRp(komisi)}, sudah dibayar ${fmtRp(paid)}.
       </div>
       <div class="hero-btns">
         <button class="pill-btn" id="btnPrint">${ICO.printer} Cetak Struk</button>
@@ -815,6 +825,7 @@ function renderVoucherPage(){
       <div><label>Qty 2K</label><input type="number" min="0" id="txQ2" value="${editV?editV.q2k:0}"></div>
       <div><label>Qty 3K</label><input type="number" min="0" id="txQ3" value="${editV?editV.q3k:0}"></div>
       <div><label>Qty 5K</label><input type="number" min="0" id="txQ5" value="${editV?editV.q5k:0}"></div>
+      <div><label>Qty 40K <span style="color:var(--muted);font-weight:400;">(tanpa komisi)</span></label><input type="number" min="0" id="txQ40" value="${editV?(editV.q40k||0):0}"></div>
       <div class="submit-row">
         <button class="mini-btn gold" id="btnSaveTx">${editV ? 'Simpan Perubahan' : 'Simpan Transaksi'}</button>
         ${editV ? `<button class="mini-btn ghost" id="btnCancelEditTx">Batal</button>` : ''}
@@ -845,7 +856,7 @@ function renderVoucherPage(){
     <div class="section-title-row"><div class="section-title">Riwayat Transaksi</div></div>
     <div class="card-list">
       ${list.map(v=>{
-        const om = v.q2k*2000+v.q3k*3000+v.q5k*5000;
+        const om = voucherOmset(v);
         return `
         <div class="simple-card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -857,6 +868,7 @@ function renderVoucherPage(){
           </div>
           <div class="row"><span>Sales</span><b>${escapeHtml(v.sales||'—')}</b></div>
           <div class="row"><span>2K / 3K / 5K</span><b>${v.q2k} / ${v.q3k} / ${v.q5k}</b></div>
+          ${(v.q40k||0) ? `<div class="row"><span>40K (tanpa komisi)</span><b>${v.q40k}</b></div>` : ''}
           <div class="row"><span>Omset</span><b>${fmtRp(om)}</b></div>
         </div>`;
       }).join('')}
@@ -1080,17 +1092,17 @@ function attachHandlers(){
   if(btnSaveTx) btnSaveTx.addEventListener('click', async ()=>{
     const date = byId('txDate').value;
     const sales = byId('txSales').value.trim();
-    const q2k = Number(byId('txQ2').value)||0, q3k = Number(byId('txQ3').value)||0, q5k = Number(byId('txQ5').value)||0;
+    const q2k = Number(byId('txQ2').value)||0, q3k = Number(byId('txQ3').value)||0, q5k = Number(byId('txQ5').value)||0, q40k = Number(byId('txQ40').value)||0;
     if(!date){ toast('Isi tanggal dulu'); return; }
-    if(q2k===0 && q3k===0 && q5k===0){ toast('Isi minimal satu jumlah voucher'); return; }
+    if(q2k===0 && q3k===0 && q5k===0 && q40k===0){ toast('Isi minimal satu jumlah voucher'); return; }
     if(ui.editingVoucherId){
-      const { error } = await sb.from('vouchers').update({ date, sales, q2k, q3k, q5k }).eq('id', ui.editingVoucherId);
+      const { error } = await sb.from('vouchers').update({ date, sales, q2k, q3k, q5k, q40k }).eq('id', ui.editingVoucherId);
       ui.editingVoucherId = null;
       ui.showTxForm = false;
       if(error){ toast('Gagal memperbarui transaksi'); return; }
       await fetchAll(); render(); toast('Transaksi diperbarui');
     } else {
-      const { error } = await sb.from('vouchers').insert({ customer_id: ui.customerId, date, sales, q2k, q3k, q5k });
+      const { error } = await sb.from('vouchers').insert({ customer_id: ui.customerId, date, sales, q2k, q3k, q5k, q40k });
       ui.showTxForm = false;
       if(error){ toast('Gagal menambah transaksi'); return; }
       await fetchAll(); render(); toast('Transaksi ditambahkan');

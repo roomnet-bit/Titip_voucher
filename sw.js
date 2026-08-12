@@ -1,4 +1,4 @@
-const CACHE = 'roomnet-v2';
+const CACHE = 'roomnet-v3';
 const SHELL = [
   '/',
   '/index.html',
