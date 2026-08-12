@@ -565,17 +565,21 @@ function financeTotalsGlobal(){
   }, {masuk:0, keluar:0});
 }
 function profitOverview(){
-  let totalOmset=0, totalKomisi=0, totalPaid=0;
+  let totalOmset=0, totalKomisi=0, totalPaid=0, totalOmset40k=0;
   state.customers.forEach(c=>{
     const s = customerStats(c.id);
     totalOmset += s.omset; totalKomisi += s.komisi; totalPaid += s.paid;
+    totalOmset40k += s.omsetNonKomisi;
   });
   const fin = financeTotalsGlobal();
+  // Komisi adalah hak pelanggan (utang ROOMNET), bukan pendapatan ROOMNET.
+  // Bagian ROOMNET = omset dikurangi komisi pelanggan.
+  const bagianRoomnet = totalOmset - totalKomisi;
   return {
-    totalOmset, totalKomisi, totalPaid,
-    saldoTerutang: totalKomisi - totalPaid,
-    profitRoomnet: totalKomisi + fin.masuk - fin.keluar,
-    saldoKas: totalPaid + fin.masuk - fin.keluar,
+    totalOmset, totalKomisi, totalPaid, totalOmset40k,
+    bagianRoomnet,
+    utangKomisi: totalKomisi - totalPaid,
+    profitRoomnet: bagianRoomnet + fin.masuk - fin.keluar,
     masuk: fin.masuk, keluar: fin.keluar
   };
 }
@@ -642,11 +646,11 @@ function buildPrintReceipt(data){
     <div class="receipt-row"><span>Omset kena komisi (2K/3K/5K)</span><b>${fmtRp(stats.omsetKomisi)}</b></div>
     <div class="receipt-row"><span>Omset 40K (tanpa komisi)</span><b>${fmtRp(stats.omsetNonKomisi)}</b></div>
     <div class="receipt-row"><span>Komisi (${rate}% dari omset kena komisi)</span><b>${fmtRp(komisi)}</b></div>
-    <div class="receipt-row"><span>Sudah Dibayar</span><b>${fmtRp(paid)}</b></div>
-    <div class="receipt-total"><span>Saldo Terutang</span><span>${fmtRp(saldo)}</span></div>
+    <div class="receipt-row"><span>Komisi Sudah Dibayar</span><b>${fmtRp(paid)}</b></div>
+    <div class="receipt-total"><span>Saldo Reseller</span><span>${fmtRp(saldo)}</span></div>
     <div class="receipt-foot">
-      <div class="sign">Diserahkan oleh<div class="line">Roomnet</div></div>
-      <div class="sign">Diterima oleh<div class="line">${escapeHtml(cust.name)}</div></div>
+      <div class="sign">Komisi dibayarkan oleh<div class="line">Roomnet</div></div>
+      <div class="sign">Komisi diterima oleh<div class="line">${escapeHtml(cust.name)}</div></div>
     </div>
   `;
   document.getElementById('printArea').innerHTML = html;
@@ -754,7 +758,7 @@ function renderVoucherPage(){
   const payList = paymentsFor(cust.id).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 
   const shareText =
-    `Saldo terutang — ${cust.name}\nRp ${Math.round(saldo).toLocaleString('id-ID')}\n\nTotal komisi: ${fmtRp(komisi)}\nSudah dibayar: ${fmtRp(paid)}\nOmset kotor: ${fmtRp(stats.omset)}\nTotal keping: ${stats.keping}\nOmset kena komisi: ${fmtRp(stats.omsetKomisi)}\n(${rate}% dari omset 2K/3K/5K; voucher 40K tanpa komisi)`;
+    `Saldo Reseller — ${cust.name}\nRp ${Math.round(saldo).toLocaleString('id-ID')}\n\nTotal komisi: ${fmtRp(komisi)}\nSudah dibayar: ${fmtRp(paid)}\nOmset kotor: ${fmtRp(stats.omset)}\nTotal keping: ${stats.keping}\nOmset kena komisi: ${fmtRp(stats.omsetKomisi)}\n(${rate}% dari omset 2K/3K/5K; voucher 40K tanpa komisi)`;
   lastShareText = shareText;
   lastReceiptData = { cust, stats, komisi, paid, saldo, rate, list };
 
@@ -762,7 +766,7 @@ function renderVoucherPage(){
   <div class="content">
     <div class="hero">
       <div class="hero-top">
-        <div class="hero-label">${ICO.wallet} Saldo Terutang — ${escapeHtml(cust.name)}</div>
+        <div class="hero-label">${ICO.wallet} Saldo Reseller — ${escapeHtml(cust.name)}</div>
         <button class="icon-btn" id="btnDelCustToggle" title="Hapus pelanggan">${ICO.trash}</button>
       </div>
       ${ui.confirmDelCustomer ? `
@@ -775,7 +779,7 @@ function renderVoucherPage(){
         ${ui.editingRate
           ? `<input class="rate-edit" type="number" min="0" max="100" id="rateInput" value="${rate}" style="width:52px;">`
           : `<span class="rate-edit" id="rateDisplay" title="Ketuk untuk ubah">${rate}%</span>`
-        } dari omset voucher 2K/3K/5K yang dititipkan ke ${escapeHtml(cust.name)}${stats.omsetNonKomisi ? ' (voucher 40K tidak kena komisi)' : ''}. Total komisi ${fmtRp(komisi)}, sudah dibayar ${fmtRp(paid)}.
+        } komisi reseller dari omset voucher 2K/3K/5K${stats.omsetNonKomisi ? ' (voucher 40K tanpa komisi, sepenuhnya Saldo Roomnet)' : ''}. Total komisi ${fmtRp(komisi)}, sudah dibayar ${fmtRp(paid)}.
       </div>
       <div class="hero-btns">
         <button class="pill-btn" id="btnPrint">${ICO.printer} Cetak Struk</button>
@@ -784,7 +788,7 @@ function renderVoucherPage(){
       <div class="hero-stats">
         <div><div class="stat-label">Omset kotor</div><div class="stat-value">${fmtRp(stats.omset)}</div></div>
         <div><div class="stat-label">Total keping</div><div class="stat-value">${stats.keping}</div></div>
-        <div><div class="stat-label">Saldo</div><div class="stat-value">${fmtRp(stats.omset - komisi)}</div></div>
+        <div><div class="stat-label">Saldo Roomnet</div><div class="stat-value">${fmtRp(stats.omset - komisi)}</div></div>
       </div>
     </div>
 
@@ -889,11 +893,16 @@ function renderProfitPage(){
     <h2 style="font-family:'Playfair Display',serif; margin:14px 0 16px 0;">Profit &amp; Saldo — ROOMNET</h2>
     <div class="kpi-mini">
       <div class="box"><div class="l">Profit Roomnet (Menyeluruh)</div><div class="v">${fmtRp(p.profitRoomnet)}</div></div>
-      <div class="box"><div class="l">Saldo Kas (sudah diterima)</div><div class="v" style="color:#8FD3A0;">${fmtRp(p.saldoKas)}</div></div>
-      <div class="box"><div class="l">Saldo Terutang (belum dibayar)</div><div class="v" style="color:#E39A80;">${fmtRp(p.saldoTerutang)}</div></div>
+      <div class="box"><div class="l">Saldo Roomnet dari Voucher</div><div class="v" style="color:#8FD3A0;">${fmtRp(p.bagianRoomnet)}</div></div>
+      <div class="box"><div class="l">Total Omset Voucher</div><div class="v">${fmtRp(p.totalOmset)}</div></div>
     </div>
     <div class="kpi-mini">
-      <div class="box"><div class="l">Total Komisi Voucher</div><div class="v">${fmtRp(p.totalKomisi)}</div></div>
+      <div class="box"><div class="l">Saldo Reseller (belum dibayar)</div><div class="v" style="color:#E39A80;">${fmtRp(p.utangKomisi)}</div></div>
+      <div class="box"><div class="l">Komisi Sudah Dibayar</div><div class="v">${fmtRp(p.totalPaid)}</div></div>
+      <div class="box"><div class="l">Total Komisi Pelanggan</div><div class="v">${fmtRp(p.totalKomisi)}</div></div>
+    </div>
+    <div class="kpi-mini">
+      <div class="box"><div class="l">Omset 40K (100% Roomnet)</div><div class="v">${fmtRp(p.totalOmset40k)}</div></div>
       <div class="box"><div class="l">Pemasukan Umum</div><div class="v" style="color:#8FD3A0;">${fmtRp(p.masuk)}</div></div>
       <div class="box"><div class="l">Pengeluaran Umum</div><div class="v" style="color:#E39A80;">${fmtRp(p.keluar)}</div></div>
     </div>
@@ -905,7 +914,8 @@ function renderProfitPage(){
         <h4>${escapeHtml(r.name)}</h4>
         <div class="row"><span>Komisi (${r.rate}%)</span><b>${fmtRp(r.komisi)}</b></div>
         <div class="row"><span>Sudah dibayar</span><b>${fmtRp(r.paid)}</b></div>
-        <div class="row"><span>Saldo terutang</span><b style="color:${r.saldo>0?'#E39A80':'#8FD3A0'};">${fmtRp(r.saldo)}</b></div>
+        <div class="row"><span>Saldo Reseller</span><b style="color:${r.saldo>0?'#E39A80':'#8FD3A0'};">${fmtRp(r.saldo)}</b></div>
+        <div class="row"><span>Saldo Roomnet</span><b>${fmtRp(r.omset - r.komisi)}</b></div>
       </div>`).join('')}
     </div>`}
   </div>`;
@@ -934,8 +944,8 @@ function renderRingkasanPage(){
         <h4>${escapeHtml(r.name)}</h4>
         <div class="row"><span>Total keping</span><b>${r.keping}</b></div>
         <div class="row"><span>Omset kotor</span><b>${fmtRp(r.omset)}</b></div>
-        <div class="row"><span>Komisi</span><b>${fmtRp(r.komisi)}</b></div>
-        <div class="row"><span>Saldo terutang</span><b>${fmtRp(r.saldo)}</b></div>
+        <div class="row"><span>Komisi pelanggan</span><b>${fmtRp(r.komisi)}</b></div>
+        <div class="row"><span>Saldo Reseller</span><b>${fmtRp(r.saldo)}</b></div>
       </div>`).join('')}
     </div>`}
   </div>`;
