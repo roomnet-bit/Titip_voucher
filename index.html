@@ -1003,6 +1003,9 @@ function renderDrawer(){
     await sb.auth.signOut();
     // onAuthStateChange akan menampilkan layar login
   });
+  drawer.querySelectorAll('[data-goto]').forEach(el=>{
+    el.addEventListener('click', ()=>{ ui.page = el.dataset.goto; ui.drawerOpen=false; render(); });
+  });
 }
 
 /* ============================= HANDLERS ============================= */
@@ -1175,7 +1178,7 @@ function attachHandlers(){
   if(btnBack) btnBack.addEventListener('click', ()=>{
     if(ui.page !== 'voucher'){ ui.page = 'voucher'; render(); }
   });
-  document.querySelectorAll('[data-goto]').forEach(el=>{
+  document.getElementById('shell').querySelectorAll('[data-goto]').forEach(el=>{
     el.addEventListener('click', ()=>{ ui.page = el.dataset.goto; ui.drawerOpen=false; render(); });
   });
 }
