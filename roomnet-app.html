@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roomnet — Komisi Voucher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+
+  :root{
+    --bg:#0F1A30;
+    --panel:#16233F;
+    --panel-2:#1B2A4A;
+    --line:rgba(255,255,255,.09);
+    --muted:#8CA0BC;
+    --cream:#EFE9DA;
+    --gold:#E0AE55;
+    --gold-deep:#C89142;
+    --paper:#F4EEDC;
+    --paper-2:#EDE4CB;
+    --danger:#D97757;
+    --sans:'Inter',system-ui,sans-serif;
+    --serif:'Playfair Display',Georgia,serif;
+    --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(circle at 50% 0%, #16233F 0%, var(--bg) 55%);
+    color:var(--cream);
+    font-family:var(--sans);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .shell{
+    max-width:460px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    padding-bottom:78px;
+  }
+  /* ===== chips row ===== */
+  .chips-wrap{
+    padding:20px 18px 6px 18px;
+  }
+  .chips-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .chip{
+    padding:13px 20px;
+    border-radius:999px;
+    border:1.5px solid rgba(140,160,188,.4);
+    color:var(--muted);
+    font-weight:600;
+    font-size:14.5px;
+    letter-spacing:.01em;
+    cursor:pointer;
+    background:transparent;
+    white-space:nowrap;
+    transition:all .15s ease;
+  }
+  .chip.active{
+    border-color:var(--gold);
+    color:var(--cream);
+    background:rgba(224,174,85,.12);
+  }
+  .chip.add{
+    border-style:dashed;
+    color:var(--gold);
+    border-color:rgba(224,174,85,.55);
+    display:flex; align-items:center; gap:6px;
+  }
+  .chip.add:hover{background:rgba(224,174,85,.08);}
+  .chip-input-row{
+    display:flex; gap:8px; align-items:center;
+    padding:10px 4px;
+  }
+  .chip-input-row input{
+    flex:1;
+    background:var(--panel);
+    border:1.5px solid var(--gold);
+    border-radius:10px;
+    padding:11px 14px;
+    color:var(--cream);
+    font-family:var(--sans);
+    font-size:14.5px;
+  }
+  .chip-input-row input::placeholder{color:var(--muted);}
+  .mini-btn{
+    border:none; border-radius:8px; padding:11px 16px;
+    font-weight:700; font-size:13.5px; cursor:pointer;
+  }
+  .mini-btn.gold{background:var(--gold); color:#1B2A41;}
+  .mini-btn.ghost{background:transparent; color:var(--muted); border:1px solid var(--line);}
+
+  .content{padding:14px 18px 10px 18px;}
+
+  /* ===== hero card ===== */
+  .hero{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line);
+    border-radius:26px;
+    padding:26px 24px 22px 24px;
+    box-shadow:0 20px 40px -20px rgba(0,0,0,.6);
+  }
+  .hero-top{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .hero-label{
+    display:flex; align-items:center; gap:9px;
+    color:var(--muted);
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+  .hero-label svg{flex-shrink:0;}
+  .icon-btn{
+    background:none; border:none; cursor:pointer; color:var(--muted);
+    padding:6px; border-radius:8px; display:flex;
+  }
+  .icon-btn:hover{color:var(--danger); background:rgba(217,119,87,.12);}
+  .hero-amount{
+    font-family:var(--serif);
+    font-weight:800;
+    font-size:52px;
+    color:var(--gold);
+    line-height:1.05;
+    letter-spacing:-.01em;
+    margin:2px 0 14px 0;
+    word-break:break-word;
+  }
+  .hero-desc{
+    color:var(--muted);
+    font-size:14.5px;
+    line-height:1.55;
+    margin-bottom:20px;
+  }
+  .hero-desc .rate-edit{
+    color:var(--gold);
+    font-weight:700;
+    background:none;
+    border:none;
+    border-bottom:1px dashed var(--gold);
+    font-family:var(--sans);
+    font-size:14.5px;
+    width:42px;
+    padding:0;
+    cursor:text;
+  }
+  .hero-btns{
+    display:flex; gap:10px; margin-bottom:22px; flex-wrap:wrap;
+  }
+  .pill-btn{
+    flex:1;
+    min-width:140px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:13px 14px;
+    border-radius:999px;
+    border:1.5px solid rgba(239,233,218,.28);
+    background:rgba(255,255,255,.03);
+    color:var(--cream);
+    font-weight:700;
+    font-size:14.5px;
+    cursor:pointer;
+    text-decoration:none;
+  }
+  .pill-btn:hover{border-color:var(--gold); color:var(--gold);}
+  .hero-stats{
+    display:flex; gap:24px; flex-wrap:wrap;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .stat-label{color:var(--muted); font-size:13px; margin-bottom:6px;}
+  .stat-value{font-family:var(--mono); font-size:22px; font-weight:600; color:var(--cream);}
+
+  .confirm-box{
+    background:rgba(217,119,87,.12);
+    border:1px solid rgba(217,119,87,.4);
+    border-radius:12px;
+    padding:10px 12px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px;
+    font-size:13px;
+    margin-bottom:14px;
+    color:var(--cream);
+  }
+  .confirm-box .btns{display:flex; gap:8px;}
+  .confirm-box button{border:none; border-radius:7px; padding:6px 12px; font-weight:700; font-size:12.5px; cursor:pointer;}
+  .confirm-box .yes{background:var(--danger); color:#fff;}
+  .confirm-box .no{background:rgba(255,255,255,.1); color:var(--cream);}
+
+  /* ===== section title ===== */
+  .section-title-row{
+    display:flex; align-items:center; justify-content:space-between;
+    margin:26px 0 14px 0;
+  }
+  .section-title{
+    font-family:var(--serif);
+    font-weight:700;
+    font-size:17px;
+    color:var(--cream);
+  }
+  .add-tx-btn{
+    border:1.5px dashed rgba(224,174,85,.55);
+    color:var(--gold);
+    background:transparent;
+    border-radius:999px;
+    padding:8px 15px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  /* ===== add transaction form ===== */
+  .tx-form{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:16px;
+    margin-bottom:16px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .tx-form .full{grid-column:1/-1;}
+  .tx-form label{display:block; font-size:11px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.05em; font-weight:700;}
+  .tx-form input{
+    width:100%; background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    padding:9px 10px; color:var(--cream); font-family:var(--sans); font-size:14px;
+  }
+  .tx-form input:focus{outline:none; border-color:var(--gold);}
+  .tx-form .submit-row{grid-column:1/-1; display:flex; gap:10px; margin-top:2px;}
+
+  /* ===== ticket cards ===== */
+  .ticket{
+    position:relative;
+    background:linear-gradient(180deg, var(--paper), var(--paper-2));
+    border-radius:20px;
+    padding:22px 24px 20px 24px;
+    margin-bottom:22px;
+    color:#2B2113;
+    overflow:visible;
+  }
+  .ticket::before, .ticket::after{
+    content:"";
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    width:26px; height:26px;
+    border-radius:50%;
+    background:var(--bg);
+  }
+  .ticket::before{left:-13px;}
+  .ticket::after{right:-13px;}
+  .ticket-top{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    margin-bottom:12px;
+  }
+  .ticket-label{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.16em;
+    color:var(--gold-deep);
+    text-transform:uppercase;
+  }
+  .ticket-qty{
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:34px;
+    color:#241B0D;
+  }
+  .ticket-qty span{font-size:17px; font-weight:600; color:#6B5B3A; margin-left:6px;}
+  .ticket-divider{
+    border-top:2px dashed rgba(43,33,19,.28);
+    margin:14px 0 12px 0;
+  }
+  .ticket-bottom{
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .ticket-omset{font-family:var(--mono); font-size:14px; color:#6B5B3A; font-weight:600;}
+  .ticket-del{
+    background:none; border:none; color:#9C8354; cursor:pointer; font-size:12px; font-weight:700;
+  }
+  .ticket-icon{color:var(--gold-deep);}
+
+  .empty-note{
+    text-align:center; color:var(--muted); font-size:13.5px; padding:24px 10px;
+  }
+
+  /* ===== share url ===== */
+  .share-row{
+    margin:6px 0 20px 0;
+  }
+  .share-box{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:13px 18px;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:13px;
+    text-align:center;
+  }
+
+  /* ===== other pages (ringkasan / keuangan) ===== */
+  .card-list{display:flex; flex-direction:column; gap:12px;}
+  .simple-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px 18px;
+  }
+  .simple-card .row{display:flex; justify-content:space-between; font-size:13.5px; color:var(--muted); margin-top:6px;}
+  .simple-card .row b{color:var(--cream); font-family:var(--mono); font-weight:600;}
+  .simple-card h4{font-family:var(--serif); margin:0 0 6px 0; font-size:16px; color:var(--cream);}
+  .type-pill{padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700;}
+  .type-pill.in{background:rgba(107,175,124,.15); color:#8FD3A0;}
+  .type-pill.out{background:rgba(217,119,87,.15); color:#E39A80;}
+  .kpi-mini{display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap;}
+  .kpi-mini .box{flex:1; min-width:120px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px;}
+  .kpi-mini .box .l{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px;}
+  .kpi-mini .box .v{font-family:var(--mono); font-weight:700; font-size:17px; color:var(--gold);}
+
+  /* ===== bottom nav ===== */
+  .bottom-nav{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    max-width:460px;
+    margin:0 auto;
+    background:rgba(15,26,48,.92);
+    backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-around;
+    padding:14px 30px 18px 30px;
+  }
+  .nav-btn{
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    padding:6px;
+  }
+  .nav-btn.active{color:var(--gold);}
+  .nav-btn.home-circle{
+    width:46px; height:46px; border-radius:50%;
+    border:2px solid var(--muted);
+  }
+  .nav-btn.home-circle.active{border-color:var(--gold);}
+
+  /* ===== drawer ===== */
+  .drawer-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:40;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .drawer-backdrop.show{opacity:1; pointer-events:auto;}
+  .drawer{
+    position:fixed; left:0; bottom:0; top:auto;
+    max-width:460px; width:100%; margin:0 auto; right:0;
+    background:var(--panel-2);
+    border-top:1px solid var(--line);
+    border-radius:22px 22px 0 0;
+    padding:10px 10px 26px 10px;
+    z-index:41;
+    transform:translateY(100%);
+    transition:transform .25s ease;
+  }
+  .drawer.show{transform:translateY(0);}
+  .drawer-handle{width:40px; height:4px; background:var(--line); border-radius:99px; margin:8px auto 14px auto;}
+  .drawer-item{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px; border-radius:12px; cursor:pointer;
+    font-weight:600; font-size:15px; color:var(--cream);
+  }
+  .drawer-item:hover{background:rgba(255,255,255,.05);}
+  .drawer-item.active{color:var(--gold);}
+
+  .toast{
+    position:fixed; bottom:92px; left:50%; transform:translateX(-50%);
+    background:var(--cream); color:var(--bg); padding:10px 18px; border-radius:999px;
+    font-size:13px; font-weight:600; z-index:60; opacity:0; pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .toast.show{opacity:1;}
+
+  /* ===== print receipt (A4) ===== */
+  #printArea{ display:none; }
+  @media print{
+    @page{ size:A4; margin:20mm; }
+    body{ background:#fff !important; }
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{
+      display:block !important;
+      position:absolute; top:0; left:0; width:100%;
+      color:#1B2A41; font-family:'Inter',sans-serif;
+    }
+    .receipt-head{ text-align:center; margin-bottom:26px; }
+    .receipt-brand{ font-family:'Playfair Display',serif; font-weight:800; font-size:26px; letter-spacing:.03em; }
+    .receipt-sub{ font-size:12px; color:#555; margin-top:2px; }
+    .receipt-line{ border-top:1.5px solid #1B2A41; margin:16px 0; }
+    .receipt-row{ display:flex; justify-content:space-between; font-size:13.5px; padding:6px 0; border-bottom:1px dotted #ccc; }
+    .receipt-row b{ font-family:'IBM Plex Mono',monospace; }
+    table.receipt-table{ width:100%; border-collapse:collapse; margin:14px 0; font-size:13px; }
+    table.receipt-table th{ text-align:left; border-bottom:1.5px solid #1B2A41; padding:6px 4px; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+    table.receipt-table td{ padding:6px 4px; border-bottom:1px solid #eee; font-family:'IBM Plex Mono',monospace; }
+    table.receipt-table td.r, table.receipt-table th.r{ text-align:right; }
+    .receipt-total{ display:flex; justify-content:space-between; font-size:18px; font-weight:800; margin-top:16px; padding-top:12px; border-top:2px solid #1B2A41; font-family:'IBM Plex Mono',monospace; }
+    .receipt-foot{ margin-top:40px; display:flex; justify-content:space-between; font-size:12px; color:#555; }
+    .receipt-foot .sign{ text-align:center; width:180px; }
+    .receipt-foot .sign .line{ margin-top:50px; border-top:1px solid #999; padding-top:4px; }
+  }
+
+  /* ===== login screen ===== */
+  .login-wrap{
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .login-card{
+    width:100%; max-width:380px;
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line);
+    border-radius:24px;
+    padding:32px 28px;
+    box-shadow:0 20px 50px -20px rgba(0,0,0,.6);
+  }
+  .login-brand{ text-align:center; margin-bottom:22px; }
+  .login-brand .mark{ font-family:var(--serif); font-weight:800; font-size:28px; color:var(--cream); }
+  .login-brand .mark span{ color:var(--gold); }
+  .login-brand .tag{ font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:4px; letter-spacing:.06em; }
+  .login-field{ margin-bottom:14px; }
+  .login-field label{ display:block; font-size:11.5px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  .login-field input{
+    width:100%; background:var(--bg); border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px; color:var(--cream); font-family:var(--sans); font-size:14.5px;
+  }
+  .login-field input:focus{ outline:none; border-color:var(--gold); }
+  .login-error{
+    background:rgba(217,119,87,.12); border:1px solid rgba(217,119,87,.4); color:#E39A80;
+    border-radius:10px; padding:10px 12px; font-size:13px; margin-bottom:14px;
+  }
+  .login-submit{
+    width:100%; background:var(--gold); color:#1B2A41; border:none; border-radius:999px;
+    padding:13px; font-weight:800; font-size:14.5px; cursor:pointer; margin-top:4px;
+  }
+  .login-switch{ text-align:center; margin-top:16px; font-size:13px; color:var(--muted); }
+  .login-switch a{ color:var(--gold); font-weight:700; cursor:pointer; text-decoration:none; }
+  .login-note{ text-align:center; font-size:11.5px; color:var(--muted); margin-top:18px; line-height:1.5; }
+
+</style>
+</head>
+<body>
+<div id="printArea"></div>
+<div class="shell" id="shell">
+  <div class="loading" style="padding:40px;text-align:center;color:#8CA0BC;font-family:'IBM Plex Mono',monospace;">Memuat…</div>
+</div>
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+
+/* ============================= SUPABASE CONFIG ============================= */
+// Ganti dua nilai ini dengan punya kamu (Project Settings > API di Supabase).
+const SUPABASE_URL = 'https://hkjsxawaqguypuhdrzqj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_3kwrPzl2hFiDV9PLyyzznQ_cENtIGKq';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ============================= STATE ============================= */
+let state = { customers: [], vouchers: [], finance: [], payments: [] };
+let ui = { page:'voucher', customerId:null, addingCustomer:false, showTxForm:false, editingVoucherId:null, showPayForm:false, showFinForm:false, confirmDelCustomer:false, editingRate:false, drawerOpen:false };
+let lastShareText = '';
+let lastReceiptData = null;
+let session = null;
+let authMode = 'login'; // 'login' | 'register'
+let authError = '';
+let authNotice = '';
+let realtimeChannel = null;
+const DENOMS = [
+  { key:'q2k', label:'2K', price:2000 },
+  { key:'q3k', label:'3K', price:3000 },
+  { key:'q5k', label:'5K', price:5000 },
+];
+
+/* ============================= DATA (SUPABASE) ============================= */
+async function fetchAll(){
+  const [c, v, p, f] = await Promise.all([
+    sb.from('customers').select('*').order('created_at'),
+    sb.from('vouchers').select('*').order('date'),
+    sb.from('payments').select('*').order('date'),
+    sb.from('finance').select('*').order('date'),
+  ]);
+  state.customers = (c.data||[]).map(r=>({ id:r.id, name:r.name, rate:Number(r.rate) }));
+  state.vouchers  = (v.data||[]).map(r=>({ id:r.id, customerId:r.customer_id, date:r.date, sales:r.sales, q2k:r.q2k, q3k:r.q3k, q5k:r.q5k }));
+  state.payments  = (p.data||[]).map(r=>({ id:r.id, customerId:r.customer_id, date:r.date, amount:Number(r.amount), note:r.note }));
+  state.finance   = (f.data||[]).map(r=>({ id:r.id, date:r.date, category:r.category, desc:r.description, type:r.type, amount:Number(r.amount) }));
+  if(!ui.customerId && state.customers.length) ui.customerId = state.customers[0].id;
+  if(ui.customerId && !state.customers.find(c2=>c2.id===ui.customerId)) ui.customerId = state.customers.length ? state.customers[0].id : null;
+}
+function subscribeRealtime(){
+  if(realtimeChannel) return;
+  realtimeChannel = sb.channel('roomnet-changes')
+    .on('postgres_changes', { event:'*', schema:'public', table:'customers' }, ()=>{ fetchAll().then(render); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'vouchers' },  ()=>{ fetchAll().then(render); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'payments' }, ()=>{ fetchAll().then(render); })
+    .on('postgres_changes', { event:'*', schema:'public', table:'finance' },  ()=>{ fetchAll().then(render); })
+    .subscribe();
+}
+async function startApp(){
+  await fetchAll();
+  subscribeRealtime();
+  render();
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 1700);
+}
+
+/* ============================= CALC ============================= */
+function vouchersFor(cid){ return state.vouchers.filter(v=>v.customerId===cid); }
+function paymentsFor(cid){ return state.payments.filter(p=>p.customerId===cid); }
+function totalPaid(cid){ return paymentsFor(cid).reduce((a,p)=>a+(Number(p.amount)||0),0); }
+function customerStats(cid){
+  const list = vouchersFor(cid);
+  const totals = { q2k:0, q3k:0, q5k:0, omset:0, keping:0 };
+  list.forEach(v=>{
+    DENOMS.forEach(d=>{ totals[d.key] += (v[d.key]||0); });
+  });
+  DENOMS.forEach(d=>{ totals.omset += totals[d.key]*d.price; });
+  totals.keping = totals.q2k + totals.q3k + totals.q5k;
+  const cust = state.customers.find(c=>c.id===cid);
+  totals.rate = cust ? (cust.rate ?? 20) : 20;
+  totals.komisi = totals.omset * totals.rate / 100;
+  totals.paid = totalPaid(cid);
+  totals.saldo = totals.komisi - totals.paid;
+  return totals;
+}
+function financeTotalsGlobal(){
+  return state.finance.reduce((acc,f)=>{
+    if(f.type==='Pemasukan') acc.masuk += Number(f.amount)||0;
+    else acc.keluar += Number(f.amount)||0;
+    return acc;
+  }, {masuk:0, keluar:0});
+}
+function profitOverview(){
+  let totalOmset=0, totalKomisi=0, totalPaid=0;
+  state.customers.forEach(c=>{
+    const s = customerStats(c.id);
+    totalOmset += s.omset; totalKomisi += s.komisi; totalPaid += s.paid;
+  });
+  const fin = financeTotalsGlobal();
+  return {
+    totalOmset, totalKomisi, totalPaid,
+    saldoTerutang: totalKomisi - totalPaid,
+    profitRoomnet: totalKomisi + fin.masuk - fin.keluar,
+    saldoKas: totalPaid + fin.masuk - fin.keluar,
+    masuk: fin.masuk, keluar: fin.keluar
+  };
+}
+function fmtRp(n){
+  n = Math.round(n||0);
+  const neg = n<0; n = Math.abs(n);
+  const s = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  return (neg?'-':'')+'Rp '+s;
+}
+function fmtDate(d){
+  if(!d) return '—';
+  const dt = new Date(d+'T00:00:00');
+  if(isNaN(dt)) return d;
+  return dt.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+}
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/* ============================= ICONS ============================= */
+const ICO = {
+  wallet:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="14" r="1.4" fill="currentColor" stroke="none"/></svg>`,
+  trash:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`,
+  printer:`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M6 17v4h12v-4"/></svg>`,
+  chat:`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4A8.5 8.5 0 0 1 8 19l-4 1 1-4a8.4 8.4 0 0 1-1-4A8.5 8.5 0 1 1 21 11.5z"/></svg>`,
+  box:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>`,
+  plus:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>`,
+  menu:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
+  back:`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>`,
+  wallet2:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="14" r="1.4" fill="currentColor" stroke="none"/></svg>`,
+  ledger:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>`,
+  trend:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>`,
+  cash:`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 6v0M18 18v0"/></svg>`,
+};
+
+/* ============================= RENDER ROOT ============================= */
+function buildPrintReceipt(data){
+  const { cust, stats, komisi, paid, saldo, rate, list } = data;
+  const today = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+  const rowsHtml = list.map(v=>{
+    const om = v.q2k*2000+v.q3k*3000+v.q5k*5000;
+    return `<tr>
+      <td>${fmtDate(v.date)}</td>
+      <td>${escapeHtml(v.sales||'—')}</td>
+      <td class="r">${v.q2k}</td>
+      <td class="r">${v.q3k}</td>
+      <td class="r">${v.q5k}</td>
+      <td class="r">${fmtRp(om)}</td>
+    </tr>`;
+  }).join('');
+  const html = `
+    <div class="receipt-head">
+      <div class="receipt-brand">ROOMNET</div>
+      <div class="receipt-sub">Struk Komisi Titip Voucher — dicetak ${today}</div>
+    </div>
+    <div class="receipt-row"><span>Nama Pelanggan</span><b>${escapeHtml(cust.name)}</b></div>
+    <div class="receipt-row"><span>Total Keping Voucher</span><b>${stats.keping} lbr</b></div>
+    <div class="receipt-row"><span>Tarif Komisi</span><b>${rate}%</b></div>
+    <div class="receipt-line"></div>
+    <table class="receipt-table">
+      <thead><tr><th>Tanggal</th><th>Sales</th><th class="r">2K</th><th class="r">3K</th><th class="r">5K</th><th class="r">Omset</th></tr></thead>
+      <tbody>${rowsHtml || '<tr><td colspan="6">Belum ada transaksi</td></tr>'}</tbody>
+    </table>
+    <div class="receipt-row"><span>Omset Kotor</span><b>${fmtRp(stats.omset)}</b></div>
+    <div class="receipt-row"><span>Komisi (${rate}%)</span><b>${fmtRp(komisi)}</b></div>
+    <div class="receipt-row"><span>Sudah Dibayar</span><b>${fmtRp(paid)}</b></div>
+    <div class="receipt-total"><span>Saldo Terutang</span><span>${fmtRp(saldo)}</span></div>
+    <div class="receipt-foot">
+      <div class="sign">Diserahkan oleh<div class="line">Roomnet</div></div>
+      <div class="sign">Diterima oleh<div class="line">${escapeHtml(cust.name)}</div></div>
+    </div>
+  `;
+  document.getElementById('printArea').innerHTML = html;
+}
+
+/* ============================= LOGIN SCREEN (SUPABASE AUTH) ============================= */
+function renderLoginScreen(){
+  const shell = document.getElementById('shell');
+  const isRegister = authMode === 'register';
+  shell.innerHTML = `
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="mark">Room<span>net</span></div>
+        <div class="tag">${isRegister ? 'daftar akun karyawan baru' : 'masuk ke akun karyawan'}</div>
+      </div>
+      ${authError ? `<div class="login-error">${escapeHtml(authError)}</div>` : ''}
+      ${authNotice ? `<div class="login-error" style="background:rgba(143,211,160,.12); border-color:rgba(143,211,160,.4); color:#8FD3A0;">${escapeHtml(authNotice)}</div>` : ''}
+      <div class="login-field"><label>Email</label><input type="email" id="authEmail" placeholder="nama@email.com"></div>
+      <div class="login-field"><label>Password</label><input type="password" id="authPass" placeholder="••••••••"></div>
+      <button class="login-submit" id="btnAuthSubmit">${isRegister ? 'Daftar & Masuk' : 'Masuk'}</button>
+      <div class="login-switch">
+        ${isRegister ? 'Sudah punya akun?' : 'Karyawan baru?'}
+        <a id="btnToggleAuthMode">${isRegister ? 'Masuk di sini' : 'Daftar akun'}</a>
+      </div>
+      ${!isRegister ? `<div class="login-switch">Lupa password? <a id="btnForgotPass">Kirim email reset</a></div>` : ''}
+      <div class="login-note">Data tersimpan di database Supabase dan dibagikan real-time ke semua karyawan yang login.</div>
+    </div>
+  </div>`;
+  document.getElementById('btnAuthSubmit').addEventListener('click', async ()=>{
+    const email = document.getElementById('authEmail').value.trim();
+    const pass = document.getElementById('authPass').value;
+    authError = ''; authNotice = '';
+    if(!email || !pass){ authError = 'Email dan password wajib diisi'; renderLoginScreen(); return; }
+    if(isRegister){
+      if(pass.length < 6){ authError = 'Password minimal 6 karakter'; renderLoginScreen(); return; }
+      const { error } = await sb.auth.signUp({ email, password: pass });
+      if(error){ authError = error.message; renderLoginScreen(); return; }
+      authNotice = 'Akun dibuat. Cek email untuk verifikasi (jika diaktifkan), lalu masuk.';
+      authMode = 'login';
+      renderLoginScreen();
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if(error){ authError = error.message; renderLoginScreen(); return; }
+      // onAuthStateChange akan memanggil startApp()
+    }
+  });
+  document.getElementById('btnToggleAuthMode').addEventListener('click', ()=>{
+    authMode = isRegister ? 'login' : 'register';
+    authError = ''; authNotice = '';
+    renderLoginScreen();
+  });
+  const btnForgot = document.getElementById('btnForgotPass');
+  if(btnForgot) btnForgot.addEventListener('click', async ()=>{
+    const email = document.getElementById('authEmail').value.trim();
+    if(!email){ authError = 'Isi email dulu untuk reset password'; renderLoginScreen(); return; }
+    const { error } = await sb.auth.resetPasswordForEmail(email);
+    authError = error ? error.message : '';
+    authNotice = error ? '' : 'Email reset password sudah dikirim, cek inbox kamu.';
+    renderLoginScreen();
+  });
+}
+
+function render(){
+  const shell = document.getElementById('shell');
+  let body = '';
+  if(ui.page==='voucher') body = renderVoucherPage();
+  else if(ui.page==='profit') body = renderProfitPage();
+  else if(ui.page==='ringkasan') body = renderRingkasanPage();
+  else if(ui.page==='keuangan') body = renderKeuanganPage();
+
+  shell.innerHTML = body + renderBottomNav();
+  renderDrawer();
+  attachHandlers();
+}
+
+/* ============================= VOUCHER PAGE ============================= */
+function renderVoucherPage(){
+  const cust = state.customers.find(c=>c.id===ui.customerId) || null;
+
+  const chipsHtml = `
+  <div class="chips-wrap">
+    <div class="chips-row">
+      ${state.customers.map(c=>`<div class="chip ${c.id===ui.customerId?'active':''}" data-select-cust="${c.id}">${escapeHtml(c.name)}</div>`).join('')}
+      ${ui.addingCustomer ? '' : `<div class="chip add" data-open-add-cust>${ICO.plus} Pelanggan Baru</div>`}
+    </div>
+    ${ui.addingCustomer ? `
+    <div class="chip-input-row">
+      <input id="newCustName" type="text" placeholder="Nama pelanggan baru" autofocus>
+      <button class="mini-btn gold" id="btnSaveCust">Simpan</button>
+      <button class="mini-btn ghost" id="btnCancelCust">Batal</button>
+    </div>` : ''}
+  </div>`;
+
+  if(!cust){
+    return chipsHtml + `<div class="content"><div class="empty-note">Belum ada pelanggan. Tambahkan pelanggan baru di atas untuk mulai mencatat titip voucher.</div></div>`;
+  }
+
+  const stats = customerStats(cust.id);
+  const rate = stats.rate;
+  const komisi = stats.komisi;
+  const paid = stats.paid;
+  const saldo = stats.saldo;
+  const list = vouchersFor(cust.id).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const payList = paymentsFor(cust.id).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+  const shareText =
+    `Saldo terutang — ${cust.name}\nRp ${Math.round(saldo).toLocaleString('id-ID')}\n\nTotal komisi: ${fmtRp(komisi)}\nSudah dibayar: ${fmtRp(paid)}\nOmset kotor: ${fmtRp(stats.omset)}\nTotal keping: ${stats.keping}\n(${rate}% dari total omset kotor)`;
+  lastShareText = shareText;
+  lastReceiptData = { cust, stats, komisi, paid, saldo, rate, list };
+
+  return chipsHtml + `
+  <div class="content">
+    <div class="hero">
+      <div class="hero-top">
+        <div class="hero-label">${ICO.wallet} Saldo Terutang — ${escapeHtml(cust.name)}</div>
+        <button class="icon-btn" id="btnDelCustToggle" title="Hapus pelanggan">${ICO.trash}</button>
+      </div>
+      ${ui.confirmDelCustomer ? `
+      <div class="confirm-box">
+        <span>Hapus pelanggan "${escapeHtml(cust.name)}" beserta semua datanya?</span>
+        <div class="btns"><button class="no" id="btnDelCustNo">Batal</button><button class="yes" id="btnDelCustYes">Hapus</button></div>
+      </div>` : ''}
+      <div class="hero-amount">${fmtRp(saldo)}</div>
+      <div class="hero-desc">
+        ${ui.editingRate
+          ? `<input class="rate-edit" type="number" min="0" max="100" id="rateInput" value="${rate}" style="width:52px;">`
+          : `<span class="rate-edit" id="rateDisplay" title="Ketuk untuk ubah">${rate}%</span>`
+        } dari total omset kotor voucher potongan yang dititipkan ke ${escapeHtml(cust.name)}. Total komisi ${fmtRp(komisi)}, sudah dibayar ${fmtRp(paid)}.
+      </div>
+      <div class="hero-btns">
+        <button class="pill-btn" id="btnPrint">${ICO.printer} Cetak Struk</button>
+        <button class="pill-btn" id="btnCopyText">${ICO.chat} Salin Teks</button>
+      </div>
+      <div class="hero-stats">
+        <div><div class="stat-label">Omset kotor</div><div class="stat-value">${fmtRp(stats.omset)}</div></div>
+        <div><div class="stat-label">Total keping</div><div class="stat-value">${stats.keping}</div></div>
+        <div><div class="stat-label">Saldo</div><div class="stat-value">${fmtRp(stats.omset - komisi)}</div></div>
+      </div>
+    </div>
+
+    <div class="section-title-row">
+      <div class="section-title">Profit &amp; Pembayaran</div>
+      <button class="add-tx-btn" id="btnTogglePayForm">${ui.showPayForm ? 'Tutup' : '+ Catat Bayar'}</button>
+    </div>
+    ${ui.showPayForm ? `
+    <div class="tx-form">
+      <div><label>Tanggal</label><input type="date" id="payDate"></div>
+      <div><label>Jumlah (Rp)</label><input type="number" min="0" id="payAmount" value="0"></div>
+      <div class="full"><label>Catatan (opsional)</label><input type="text" id="payNote" placeholder="cth. transfer BCA"></div>
+      <div class="submit-row"><button class="mini-btn gold" id="btnSavePay">Simpan Pembayaran</button></div>
+    </div>` : ''}
+    ${payList.length ? `
+    <div class="card-list" style="margin-bottom:8px;">
+      ${payList.map(p=>`
+      <div class="simple-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h4>${fmtDate(p.date)}</h4>
+          <button class="ticket-del" data-del-pay="${p.id}" style="color:#E39A80;">Hapus</button>
+        </div>
+        <div class="row"><span>${escapeHtml(p.note||'Pembayaran diterima')}</span><b>${fmtRp(p.amount)}</b></div>
+      </div>`).join('')}
+    </div>` : `<div class="empty-note" style="padding:10px 4px 18px 4px;">Belum ada pembayaran tercatat untuk pelanggan ini.</div>`}
+
+    <div class="section-title-row">
+      <div class="section-title">Rincian Voucher</div>
+      <button class="add-tx-btn" id="btnToggleTxForm">${ui.showTxForm ? 'Tutup' : '+ Tambah'}</button>
+    </div>
+
+    ${ui.showTxForm ? (()=>{
+      const editV = ui.editingVoucherId ? state.vouchers.find(v=>v.id===ui.editingVoucherId) : null;
+      return `
+    <div class="tx-form">
+      <div><label>Tanggal</label><input type="date" id="txDate" value="${editV?editV.date:''}"></div>
+      <div><label>Nama Sales</label><input type="text" id="txSales" placeholder="cth. ibnu" value="${editV?escapeHtml(editV.sales||''):''}"></div>
+      <div><label>Qty 2K</label><input type="number" min="0" id="txQ2" value="${editV?editV.q2k:0}"></div>
+      <div><label>Qty 3K</label><input type="number" min="0" id="txQ3" value="${editV?editV.q3k:0}"></div>
+      <div><label>Qty 5K</label><input type="number" min="0" id="txQ5" value="${editV?editV.q5k:0}"></div>
+      <div class="submit-row">
+        <button class="mini-btn gold" id="btnSaveTx">${editV ? 'Simpan Perubahan' : 'Simpan Transaksi'}</button>
+        ${editV ? `<button class="mini-btn ghost" id="btnCancelEditTx">Batal</button>` : ''}
+      </div>
+    </div>`;
+    })() : ''}
+
+    ${DENOMS.map(d=>{
+      const qty = stats[d.key];
+      const omset = qty * d.price;
+      return `
+      <div class="ticket">
+        <div class="ticket-top">
+          <div>
+            <div class="ticket-label">Voucher ${d.label}</div>
+            <div class="ticket-qty">${qty} <span>lbr</span></div>
+          </div>
+          <div class="ticket-icon">${ICO.box}</div>
+        </div>
+        <div class="ticket-divider"></div>
+        <div class="ticket-bottom">
+          <div class="ticket-omset">${fmtRp(omset)} omset</div>
+        </div>
+      </div>`;
+    }).join('')}
+
+    ${list.length ? `
+    <div class="section-title-row"><div class="section-title">Riwayat Transaksi</div></div>
+    <div class="card-list">
+      ${list.map(v=>{
+        const om = v.q2k*2000+v.q3k*3000+v.q5k*5000;
+        return `
+        <div class="simple-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h4>${fmtDate(v.date)}</h4>
+            <div class="row-actions" style="display:flex; gap:4px;">
+              <button class="ticket-del" data-edit-v="${v.id}" style="color:var(--gold);">Edit</button>
+              <button class="ticket-del" data-del-v="${v.id}" style="color:#E39A80;">Hapus</button>
+            </div>
+          </div>
+          <div class="row"><span>Sales</span><b>${escapeHtml(v.sales||'—')}</b></div>
+          <div class="row"><span>2K / 3K / 5K</span><b>${v.q2k} / ${v.q3k} / ${v.q5k}</b></div>
+          <div class="row"><span>Omset</span><b>${fmtRp(om)}</b></div>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+
+    <div class="share-row">
+      <div class="share-box">https://voucher-app/${cust.id.slice(0,8)}...</div>
+    </div>
+  </div>`;
+}
+
+/* ============================= PROFIT & SALDO PAGE ============================= */
+function renderProfitPage(){
+  const p = profitOverview();
+  const rows = state.customers.map(c=>({ name:c.name, ...customerStats(c.id) }));
+  return `
+  <div class="content">
+    <h2 style="font-family:'Playfair Display',serif; margin:14px 0 16px 0;">Profit &amp; Saldo — ROOMNET</h2>
+    <div class="kpi-mini">
+      <div class="box"><div class="l">Profit Roomnet (Menyeluruh)</div><div class="v">${fmtRp(p.profitRoomnet)}</div></div>
+      <div class="box"><div class="l">Saldo Kas (sudah diterima)</div><div class="v" style="color:#8FD3A0;">${fmtRp(p.saldoKas)}</div></div>
+      <div class="box"><div class="l">Saldo Terutang (belum dibayar)</div><div class="v" style="color:#E39A80;">${fmtRp(p.saldoTerutang)}</div></div>
+    </div>
+    <div class="kpi-mini">
+      <div class="box"><div class="l">Total Komisi Voucher</div><div class="v">${fmtRp(p.totalKomisi)}</div></div>
+      <div class="box"><div class="l">Pemasukan Umum</div><div class="v" style="color:#8FD3A0;">${fmtRp(p.masuk)}</div></div>
+      <div class="box"><div class="l">Pengeluaran Umum</div><div class="v" style="color:#E39A80;">${fmtRp(p.keluar)}</div></div>
+    </div>
+    <div class="section-title-row" style="margin-top:8px;"><div class="section-title">Rincian per Pelanggan</div></div>
+    ${rows.length===0 ? `<div class="empty-note">Belum ada pelanggan.</div>` : `
+    <div class="card-list">
+      ${rows.map(r=>`
+      <div class="simple-card">
+        <h4>${escapeHtml(r.name)}</h4>
+        <div class="row"><span>Komisi (${r.rate}%)</span><b>${fmtRp(r.komisi)}</b></div>
+        <div class="row"><span>Sudah dibayar</span><b>${fmtRp(r.paid)}</b></div>
+        <div class="row"><span>Saldo terutang</span><b style="color:${r.saldo>0?'#E39A80':'#8FD3A0'};">${fmtRp(r.saldo)}</b></div>
+      </div>`).join('')}
+    </div>`}
+  </div>`;
+}
+
+/* ============================= RINGKASAN PAGE ============================= */
+function renderRingkasanPage(){
+  const rows = state.customers.map(c=>{
+    const s = customerStats(c.id);
+    return { name:c.name, omset:s.omset, keping:s.keping, komisi:s.komisi, saldo:s.saldo };
+  });
+  const totalOmset = rows.reduce((a,r)=>a+r.omset,0);
+  const totalKomisi = rows.reduce((a,r)=>a+r.komisi,0);
+  return `
+  <div class="content">
+    <h2 style="font-family:'Playfair Display',serif; margin:14px 0 16px 0;">Ringkasan Semua Pelanggan</h2>
+    <div class="kpi-mini">
+      <div class="box"><div class="l">Total Omset</div><div class="v">${fmtRp(totalOmset)}</div></div>
+      <div class="box"><div class="l">Total Komisi</div><div class="v">${fmtRp(totalKomisi)}</div></div>
+      <div class="box"><div class="l">Pelanggan</div><div class="v">${rows.length}</div></div>
+    </div>
+    ${rows.length===0 ? `<div class="empty-note">Belum ada pelanggan.</div>` : `
+    <div class="card-list">
+      ${rows.map(r=>`
+      <div class="simple-card">
+        <h4>${escapeHtml(r.name)}</h4>
+        <div class="row"><span>Total keping</span><b>${r.keping}</b></div>
+        <div class="row"><span>Omset kotor</span><b>${fmtRp(r.omset)}</b></div>
+        <div class="row"><span>Komisi</span><b>${fmtRp(r.komisi)}</b></div>
+        <div class="row"><span>Saldo terutang</span><b>${fmtRp(r.saldo)}</b></div>
+      </div>`).join('')}
+    </div>`}
+  </div>`;
+}
+
+/* ============================= KEUANGAN PAGE ============================= */
+function renderKeuanganPage(){
+  const rows = state.finance.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const masuk = rows.filter(f=>f.type==='Pemasukan').reduce((a,f)=>a+Number(f.amount||0),0);
+  const keluar = rows.filter(f=>f.type==='Pengeluaran').reduce((a,f)=>a+Number(f.amount||0),0);
+  return `
+  <div class="content">
+    <div class="section-title-row" style="margin-top:14px;">
+      <h2 style="font-family:'Playfair Display',serif; margin:0;">Keuangan Umum</h2>
+      <button class="add-tx-btn" id="btnToggleFinForm">${ui.showFinForm ? 'Tutup' : '+ Tambah'}</button>
+    </div>
+    <div class="kpi-mini">
+      <div class="box"><div class="l">Pemasukan</div><div class="v" style="color:#8FD3A0;">${fmtRp(masuk)}</div></div>
+      <div class="box"><div class="l">Pengeluaran</div><div class="v" style="color:#E39A80;">${fmtRp(keluar)}</div></div>
+      <div class="box"><div class="l">Saldo</div><div class="v">${fmtRp(masuk-keluar)}</div></div>
+    </div>
+    ${ui.showFinForm ? `
+    <div class="tx-form">
+      <div><label>Tanggal</label><input type="date" id="fDate"></div>
+      <div><label>Jenis</label>
+        <select id="fType" style="width:100%; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:9px 10px; color:var(--cream);">
+          <option value="Pemasukan">Pemasukan</option>
+          <option value="Pengeluaran">Pengeluaran</option>
+        </select>
+      </div>
+      <div class="full"><label>Kategori</label><input type="text" id="fCategory" placeholder="cth. Sewa Toko"></div>
+      <div class="full"><label>Keterangan</label><input type="text" id="fDesc" placeholder="cth. Bayar sewa bulanan"></div>
+      <div class="full"><label>Jumlah (Rp)</label><input type="number" min="0" id="fAmount" value="0"></div>
+      <div class="submit-row"><button class="mini-btn gold" id="btnSaveFin">Simpan</button></div>
+    </div>` : ''}
+    ${rows.length===0 ? `<div class="empty-note">Belum ada catatan keuangan.</div>` : `
+    <div class="card-list">
+      ${rows.map(f=>`
+      <div class="simple-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h4>${escapeHtml(f.category||'—')}</h4>
+          <span class="type-pill ${f.type==='Pemasukan'?'in':'out'}">${f.type}</span>
+        </div>
+        <div class="row"><span>${escapeHtml(f.desc||'')}</span><b>${fmtDate(f.date)}</b></div>
+        <div class="row"><span>Jumlah</span><b>${fmtRp(f.amount)}</b></div>
+        <div style="text-align:right; margin-top:6px;"><button class="ticket-del" data-del-f="${f.id}" style="color:#E39A80;">Hapus</button></div>
+      </div>`).join('')}
+    </div>`}
+  </div>`;
+}
+
+/* ============================= NAV / DRAWER ============================= */
+function renderBottomNav(){
+  return `
+  <div class="bottom-nav">
+    <button class="nav-btn" id="btnDrawer">${ICO.menu}</button>
+    <button class="nav-btn home-circle ${ui.page==='voucher'?'active':''}" id="btnHome"></button>
+    <button class="nav-btn" id="btnBack">${ICO.back}</button>
+  </div>`;
+}
+function renderDrawer(){
+  const drawer = document.getElementById('drawer');
+  drawer.innerHTML = `
+    <div class="drawer-handle"></div>
+    <div class="drawer-item ${ui.page==='voucher'?'active':''}" data-goto="voucher">${ICO.wallet2} Data Voucher</div>
+    <div class="drawer-item ${ui.page==='profit'?'active':''}" data-goto="profit">${ICO.trend} Profit &amp; Saldo</div>
+    <div class="drawer-item ${ui.page==='ringkasan'?'active':''}" data-goto="ringkasan">${ICO.box} Ringkasan Pelanggan</div>
+    <div class="drawer-item ${ui.page==='keuangan'?'active':''}" data-goto="keuangan">${ICO.ledger} Keuangan Umum</div>
+    <div class="drawer-item" id="btnLogout" style="color:#E39A80;">${ICO.trash} Keluar</div>
+  `;
+  drawer.classList.toggle('show', ui.drawerOpen);
+  document.getElementById('drawerBackdrop').classList.toggle('show', ui.drawerOpen);
+  const btnLogout = document.getElementById('btnLogout');
+  if(btnLogout) btnLogout.addEventListener('click', async ()=>{
+    ui.drawerOpen = false;
+    if(realtimeChannel){ sb.removeChannel(realtimeChannel); realtimeChannel = null; }
+    await sb.auth.signOut();
+    // onAuthStateChange akan menampilkan layar login
+  });
+}
+
+/* ============================= HANDLERS ============================= */
+function attachHandlers(){
+  const byId = id => document.getElementById(id);
+
+  // chips
+  document.querySelectorAll('[data-select-cust]').forEach(el=>{
+    el.addEventListener('click', ()=>{ ui.customerId = el.dataset.selectCust; ui.confirmDelCustomer=false; ui.editingRate=false; render(); });
+  });
+  const openAdd = byId('btnOpenAddCust') || document.querySelector('[data-open-add-cust]');
+  if(openAdd) openAdd.addEventListener('click', ()=>{ ui.addingCustomer = true; render(); setTimeout(()=>byId('newCustName')?.focus(),10); });
+  const btnSaveCust = byId('btnSaveCust');
+  if(btnSaveCust) btnSaveCust.addEventListener('click', async ()=>{
+    const name = byId('newCustName').value.trim();
+    if(!name){ toast('Nama pelanggan tidak boleh kosong'); return; }
+    const { data, error } = await sb.from('customers').insert({ name, rate:20 }).select().single();
+    if(error){ toast('Gagal menambah pelanggan'); return; }
+    await fetchAll();
+    ui.customerId = data.id;
+    ui.addingCustomer = false;
+    render(); toast('Pelanggan ditambahkan');
+  });
+  const btnCancelCust = byId('btnCancelCust');
+  if(btnCancelCust) btnCancelCust.addEventListener('click', ()=>{ ui.addingCustomer=false; render(); });
+
+  // delete customer
+  const btnDelToggle = byId('btnDelCustToggle');
+  if(btnDelToggle) btnDelToggle.addEventListener('click', ()=>{ ui.confirmDelCustomer = !ui.confirmDelCustomer; render(); });
+  const btnDelNo = byId('btnDelCustNo');
+  if(btnDelNo) btnDelNo.addEventListener('click', ()=>{ ui.confirmDelCustomer=false; render(); });
+  const btnDelYes = byId('btnDelCustYes');
+  if(btnDelYes) btnDelYes.addEventListener('click', async ()=>{
+    const id = ui.customerId;
+    const { error } = await sb.from('customers').delete().eq('id', id);
+    if(error){ toast('Gagal menghapus pelanggan'); return; }
+    ui.confirmDelCustomer = false;
+    await fetchAll();
+    render(); toast('Pelanggan dihapus');
+  });
+
+  // rate edit
+  const rateDisplay = byId('rateDisplay');
+  if(rateDisplay) rateDisplay.addEventListener('click', ()=>{ ui.editingRate = true; render(); setTimeout(()=>byId('rateInput')?.focus(),10); });
+  const rateInput = byId('rateInput');
+  if(rateInput){
+    const commit = async ()=>{
+      let val = Number(rateInput.value); if(isNaN(val) || val<0) val = 0; if(val>100) val = 100;
+      const { error } = await sb.from('customers').update({ rate: val }).eq('id', ui.customerId);
+      ui.editingRate = false;
+      if(error){ toast('Gagal menyimpan tarif'); }
+      await fetchAll();
+      render();
+    };
+    rateInput.addEventListener('blur', commit);
+    rateInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') commit(); });
+  }
+
+  // tx form
+  const btnToggleTx = byId('btnToggleTxForm');
+  if(btnToggleTx) btnToggleTx.addEventListener('click', ()=>{ ui.showTxForm = !ui.showTxForm; ui.editingVoucherId = null; render(); });
+  document.querySelectorAll('[data-edit-v]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      ui.editingVoucherId = el.dataset.editV;
+      ui.showTxForm = true;
+      render();
+    });
+  });
+  const btnCancelEditTx = byId('btnCancelEditTx');
+  if(btnCancelEditTx) btnCancelEditTx.addEventListener('click', ()=>{ ui.editingVoucherId = null; ui.showTxForm = false; render(); });
+  const btnSaveTx = byId('btnSaveTx');
+  if(btnSaveTx) btnSaveTx.addEventListener('click', async ()=>{
+    const date = byId('txDate').value;
+    const sales = byId('txSales').value.trim();
+    const q2k = Number(byId('txQ2').value)||0, q3k = Number(byId('txQ3').value)||0, q5k = Number(byId('txQ5').value)||0;
+    if(!date){ toast('Isi tanggal dulu'); return; }
+    if(q2k===0 && q3k===0 && q5k===0){ toast('Isi minimal satu jumlah voucher'); return; }
+    if(ui.editingVoucherId){
+      const { error } = await sb.from('vouchers').update({ date, sales, q2k, q3k, q5k }).eq('id', ui.editingVoucherId);
+      ui.editingVoucherId = null;
+      ui.showTxForm = false;
+      if(error){ toast('Gagal memperbarui transaksi'); return; }
+      await fetchAll(); render(); toast('Transaksi diperbarui');
+    } else {
+      const { error } = await sb.from('vouchers').insert({ customer_id: ui.customerId, date, sales, q2k, q3k, q5k });
+      ui.showTxForm = false;
+      if(error){ toast('Gagal menambah transaksi'); return; }
+      await fetchAll(); render(); toast('Transaksi ditambahkan');
+    }
+  });
+  document.querySelectorAll('[data-del-v]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const { error } = await sb.from('vouchers').delete().eq('id', el.dataset.delV);
+      if(error){ toast('Gagal menghapus transaksi'); return; }
+      await fetchAll(); render(); toast('Transaksi dihapus');
+    });
+  });
+
+  // payment (profit/saldo)
+  const btnTogglePay = byId('btnTogglePayForm');
+  if(btnTogglePay) btnTogglePay.addEventListener('click', ()=>{ ui.showPayForm = !ui.showPayForm; render(); });
+  const btnSavePay = byId('btnSavePay');
+  if(btnSavePay) btnSavePay.addEventListener('click', async ()=>{
+    const date = byId('payDate').value;
+    const amount = Number(byId('payAmount').value)||0;
+    const note = byId('payNote').value.trim();
+    if(!date){ toast('Isi tanggal dulu'); return; }
+    if(amount<=0){ toast('Isi jumlah lebih dari 0'); return; }
+    const { error } = await sb.from('payments').insert({ customer_id: ui.customerId, date, amount, note });
+    ui.showPayForm = false;
+    if(error){ toast('Gagal mencatat pembayaran'); return; }
+    await fetchAll(); render(); toast('Pembayaran dicatat');
+  });
+  document.querySelectorAll('[data-del-pay]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const { error } = await sb.from('payments').delete().eq('id', el.dataset.delPay);
+      if(error){ toast('Gagal menghapus pembayaran'); return; }
+      await fetchAll(); render(); toast('Pembayaran dihapus');
+    });
+  });
+
+  // print
+  const btnPrint = byId('btnPrint');
+  if(btnPrint) btnPrint.addEventListener('click', ()=>{
+    if(lastReceiptData) buildPrintReceipt(lastReceiptData);
+    window.print();
+  });
+
+  // copy text (manual WA/share)
+  const btnCopyText = byId('btnCopyText');
+  if(btnCopyText) btnCopyText.addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(lastShareText);
+      toast('Teks disalin — tempel manual di WhatsApp');
+    }catch(e){
+      toast('Gagal menyalin, coba lagi');
+    }
+  });
+
+  // finance
+  const btnToggleFin = byId('btnToggleFinForm');
+  if(btnToggleFin) btnToggleFin.addEventListener('click', ()=>{ ui.showFinForm = !ui.showFinForm; render(); });
+  const btnSaveFin = byId('btnSaveFin');
+  if(btnSaveFin) btnSaveFin.addEventListener('click', async ()=>{
+    const date = byId('fDate').value, category = byId('fCategory').value.trim(), desc = byId('fDesc').value.trim();
+    const type = byId('fType').value, amount = Number(byId('fAmount').value)||0;
+    if(!date){ toast('Isi tanggal dulu'); return; }
+    if(amount<=0){ toast('Isi jumlah lebih dari 0'); return; }
+    const { error } = await sb.from('finance').insert({ date, category, description: desc, type, amount });
+    ui.showFinForm = false;
+    if(error){ toast('Gagal menambah catatan'); return; }
+    await fetchAll(); render(); toast('Catatan ditambahkan');
+  });
+  document.querySelectorAll('[data-del-f]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const { error } = await sb.from('finance').delete().eq('id', el.dataset.delF);
+      if(error){ toast('Gagal menghapus catatan'); return; }
+      await fetchAll(); render(); toast('Catatan dihapus');
+    });
+  });
+
+  // bottom nav + drawer
+  const btnDrawer = byId('btnDrawer');
+  if(btnDrawer) btnDrawer.addEventListener('click', ()=>{ ui.drawerOpen = !ui.drawerOpen; renderDrawer(); });
+  const backdrop = byId('drawerBackdrop');
+  if(backdrop) backdrop.addEventListener('click', ()=>{ ui.drawerOpen = false; renderDrawer(); });
+  const btnHome = byId('btnHome');
+  if(btnHome) btnHome.addEventListener('click', ()=>{ ui.page = 'voucher'; ui.drawerOpen=false; render(); });
+  const btnBack = byId('btnBack');
+  if(btnBack) btnBack.addEventListener('click', ()=>{
+    if(ui.page !== 'voucher'){ ui.page = 'voucher'; render(); }
+  });
+  document.querySelectorAll('[data-goto]').forEach(el=>{
+    el.addEventListener('click', ()=>{ ui.page = el.dataset.goto; ui.drawerOpen=false; render(); });
+  });
+}
+
+/* ============================= INIT ============================= */
+(async function init(){
+  const { data: { session: s } } = await sb.auth.getSession();
+  session = s;
+  sb.auth.onAuthStateChange((_event, s2)=>{
+    session = s2;
+    if(session){ startApp(); } else { authMode = 'login'; authError=''; renderLoginScreen(); }
+  });
+  if(session){ await startApp(); } else { renderLoginScreen(); }
+})();
+
+</script>
+</body>
+</html>
